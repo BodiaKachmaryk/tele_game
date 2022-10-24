@@ -2,6 +2,7 @@
 import logging
 from telegram import Update
 from telegram.ext import CallbackContext, CommandHandler, Updater, MessageHandler, Filters
+from db import bot_telegram_collection
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -14,6 +15,28 @@ state = 1
 
 updater = Updater(token="5585661483:AAESAKtCJ6gejn6h6HYoH2mqt3ExzsMr2Gs", use_context=True)
 dispatcher = updater.dispatcher
+
+def start_command_handler(update: Update, context: CallbackContext):
+    user_by_id = bot_telegram_collection.find_one({"_id": update.effective_chat.id})
+    
+    if user_by_id != None:
+        print("User already exists")
+    else:
+        print("New user")
+        user = {
+            "_id": update.effective_chat.id,
+            "name": update.effective_chat.full_name,
+        }
+        bot_telegram_collection.insert_one(user)
+        context.bot.send_message(chat_id=update.effective_chat.id,  text=f"Hello, {update.effective_chat.first_name}!") 
+ 
+
+
+def help_command_handler(update: Update, context: CallbackContext):
+    context.bot.send_chat_action(update.effective_chat.id, """
+    Це мій перший телеграм бот-гра. Задача гри вибрати правильний хід гри, гра триває до одного забитого гола. Керування відбувається цифрами від 1 до 9.
+    """)
+    
 
 def start_command_handler(update: Update, context: CallbackContext):
     global state
@@ -101,14 +124,14 @@ def text_message_handler(update: Update, context: CallbackContext):
         elif message == "2":
             context.bot.send_message(chat_id=update.effective_chat.id, text="""
             Ви отримали пас. Наступні Ваші дії з м'ячом:
-            1: Віддати пас нападнику
+            3: Віддати пас нападнику
             """)
             state += 1
 
         elif message == "3":
             context.bot.send_message(chat_id=update.effective_chat.id, text="""
             Ви отримали пас. Наступні Ваші дії з м'ячом:
-            1: Віддати пас нападнику
+            4: Віддати пас нападнику
             """)
             state += 1
 
@@ -121,6 +144,22 @@ def text_message_handler(update: Update, context: CallbackContext):
             1: Забити гол
             """)
             state += 1
+
+        elif message == "3":
+            context.bot.send_message(chat_id=update.effective_chat.id, text="""
+            Ви отримали пас. Наступні Ваші дії з м'ячом:
+            3: Зробити асист
+            2: Вдарити мимо ворі
+            """)
+            state += 1 
+
+        elif message == "4":
+            context.bot.send_message(chat_id=update.effective_chat.id, text="""
+            Ви отримали пас. Наступні Ваші дії з м'ячом:
+            3: Зробити асист
+            2: Вдарити мимо ворі
+            """)
+            state += 1    
 
         elif message == "2":
             context.bot.send_message(chat_id=update.effective_chat.id, text="""
@@ -140,11 +179,43 @@ def text_message_handler(update: Update, context: CallbackContext):
             state = 1
             text = "Ваша команда перемогла. Введіть /start, щоб почати матч знову."
             context.bot.send_message(chat_id=update.effective_chat.id, text=text)
+
+        elif message == "3":
+            context.bot.send_message(chat_id=update.effective_chat.id, text="""
+            Ви отримали пас. Наступні Ваші дії з м'ячом:
+            1: Забити гол 
+            """)
+            state += 1
+            context.bot.send_message(chat_id=update.effective_chat.id, text=text)
+        
+        elif message == "2":
+            context.bot.send_message(chat_id=update.effective_chat.id, text="""
+             Ви вдарили мимо воріт. 
+            """)
+            state = 1
+            text = "Потрібно знову розвести м'яч. Введіть /start, щоб почати знову."
+            context.bot.send_message(chat_id=update.effective_chat.id, text=text)
+    elif state == 7:
+        if message == "1":
+            context.bot.send_message(chat_id=update.effective_chat.id, text="""
+            Вітю, Ви забили гол! 
+            """)
+            state = 1
+            text = "Ваша команда перемогла. Введіть /start, щоб почати матч знову."
+            context.bot.send_message(chat_id=update.effective_chat.id, text=text)
+
+
     else:
         pass
 
 start_handler = CommandHandler('start', start_command_handler)
 dispatcher.add_handler(start_handler)
+
+
+
+help_handler = CommandHandler('help', help_command_handler)
+dispatcher.add_handler(help_handler)
+
 
 echo_handler = MessageHandler(Filters.text & ~Filters.command, text_message_handler)
 dispatcher.add_handler(echo_handler)
